@@ -1,2 +1,2 @@
 # ultimate-fitness-backend
-Modular fitness tracking app with PostgreSQL/Supabase database, Kotlin/Ktor backend and Android client.
+Backend and database layer for a modular fitness tracking app using Kotlin/Ktor, Supabase and PostgreSQL.
