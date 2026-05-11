@@ -2,10 +2,47 @@
 
 This document describes the planned backend architecture for the Ultimate Fitness project.
 
-The backend will be built with Kotlin and Ktor.  
+The backend is built with Kotlin and Ktor.  
 Its purpose is to provide a controlled API layer between the client application and the PostgreSQL/Supabase database.
 
 The backend should not only pass data through. It should also handle validation, security, error handling and clean API responses.
+
+## Current Backend Status
+
+The initial Ktor backend project has been created inside the `backend/` directory.
+
+The server can be started locally with:
+
+```bash
+./gradlew run
+```
+
+On Windows:
+
+```powershell
+.\gradlew.bat run
+```
+
+The first health endpoint is available at:
+
+```text
+GET /health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+Currently implemented:
+
+- Ktor project created
+- Local server start works
+- JSON response works
+- `GET /health` is implemented
 
 ## Main Responsibilities
 
@@ -26,14 +63,17 @@ The backend adds an additional controlled application layer on top.
 
 The backend should be separated into clear layers.
 
+```text
 Route → Service → Repository → Database
+```
 
 ### Route
 
 Routes receive HTTP requests and return HTTP responses.
 
-Example:
+Examples:
 
+- `GET /health`
 - `GET /exercises`
 - `POST /training-days`
 
@@ -105,11 +145,11 @@ Important cases to test:
 
 The backend should start small and grow step by step.
 
-Planned first endpoints:
+Planned / implemented first endpoints:
 
-- `GET /health`
-- `GET /exercises`
-- `GET /training-days/{date}`
+- `GET /health` - implemented
+- `GET /exercises` - planned
+- `GET /training-days/{date}` - planned
 
 The first goal is not to implement every feature at once.  
 The first goal is to verify that:

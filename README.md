@@ -28,6 +28,8 @@ The app is designed around separate training domains instead of forcing every ac
 - Muscle group mappings with primary, secondary and stabilizing roles
 - Row Level Security policies implemented
 - Index scripts implemented
+- Initial Ktor backend created
+- Health endpoint implemented
 
 ## Database Structure
 
