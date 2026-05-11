@@ -8,23 +8,11 @@
 -- ============================================================
 
 -- ============================================================
--- Profiles
--- ============================================================
-
-create index idx_profiles_username
-on public.profiles (username);
-
-
--- ============================================================
 -- Training Days
 -- ============================================================
 
 create index idx_training_days_profile_id
 on public.training_days (profile_id);
-
-create index idx_training_days_profile_id_training_date
-on public.training_days (profile_id, training_date);
-
 
 -- ============================================================
 -- Exercises
@@ -60,10 +48,6 @@ on public.strength_entries (training_day_id);
 create index idx_strength_entries_exercise_id
 on public.strength_entries (exercise_id);
 
-create index idx_strength_entries_training_day_id_exercise_id
-on public.strength_entries (training_day_id, exercise_id);
-
-
 -- ============================================================
 -- Strength Rep Sets
 -- ============================================================
@@ -71,19 +55,12 @@ on public.strength_entries (training_day_id, exercise_id);
 create index idx_strength_rep_sets_strength_entry_id
 on public.strength_rep_sets (strength_entry_id);
 
-create index idx_strength_rep_sets_strength_entry_id_set_number
-on public.strength_rep_sets (strength_entry_id, set_number);
-
-
 -- ============================================================
 -- Strength Time Sets
 -- ============================================================
 
 create index idx_strength_time_sets_strength_entry_id
 on public.strength_time_sets (strength_entry_id);
-
-create index idx_strength_time_sets_strength_entry_id_set_number
-on public.strength_time_sets (strength_entry_id, set_number);
 
 -- ============================================================
 -- Endurance Entries
