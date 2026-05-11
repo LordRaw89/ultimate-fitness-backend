@@ -26,8 +26,8 @@ The app is designed around separate training domains instead of forcing every ac
 - Core seed data created
 - Exercise catalog started
 - Muscle group mappings with primary, secondary and stabilizing roles
-- Row Level Security policies prepared
-- Index scripts prepared
+- Row Level Security policies implemented
+- Index scripts implemented
 
 ## Database Structure
 
