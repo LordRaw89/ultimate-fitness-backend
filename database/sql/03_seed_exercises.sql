@@ -170,3 +170,19 @@ values
     'Machine-guided compound lower body exercise focusing on quadriceps and glutes with controlled movement path.'
   );
   
+-- ============================================================
+-- 03. Endurance Exercises
+-- ============================================================
+
+insert into public.exercises (
+  exercise_name,
+  exercise_category_id,
+  notes
+)
+values
+  (
+    'Running',
+    (select exercise_category_id from public.exercise_categories where exercise_category_name = 'Endurance'),
+    'General running endurance activity.'
+  );
+  
