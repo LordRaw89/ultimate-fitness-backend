@@ -36,3 +36,16 @@ database/backups/
 
 # Supabase local files
 .supabase/
+
+# IDE files
+.idea/
+backend/.idea/
+
+# Local machine files
+local.properties
+backend/local.properties
+
+# Build files
+backend/build/
+backend/.gradle/
+backend/.kotlin/
