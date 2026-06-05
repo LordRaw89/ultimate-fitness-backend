@@ -3,5 +3,4 @@ ktor:
     port: 8080
   application:
     modules:
-      - de.SerializationKt.configureSerialization
-      - de.RoutingKt.configureRouting
+      - de.ApplicationKt.module
