@@ -3,6 +3,7 @@ package de.config
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 object DatabaseConfig {
 
@@ -18,6 +19,7 @@ object DatabaseConfig {
         )
 
         Database.connect(dataSource)
+        testConnection()
 
         println("Database connection pool was initialized.")
     }
@@ -43,5 +45,13 @@ object DatabaseConfig {
     private fun requireEnvironmentVariable(name: String): String {
         return System.getenv(name)
             ?: error("$name environment variable is not set.")
+    }
+
+    private fun testConnection() {
+        transaction {
+            exec("SELECT 1")
+        }
+
+        println("Database connection test was successful.")
     }
 }
