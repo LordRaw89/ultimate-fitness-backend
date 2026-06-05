@@ -32,6 +32,9 @@ dependencies {
 
     // JDBC connection pool
     implementation("com.zaxxer:HikariCP:7.0.2")
-    testImplementation(kotlin("test"))
+
+    // Tests
     testImplementation(ktorLibs.server.testHost)
+    testImplementation(kotlin("test"))
+    testImplementation(libs.junit)
 }

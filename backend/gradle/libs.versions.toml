@@ -1,9 +1,11 @@
 [versions]
 kotlin = "2.3.21"
 logback = "1.5.21"
+junit = "4.12"
 
 [libraries]
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
