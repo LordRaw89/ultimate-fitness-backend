@@ -4,7 +4,8 @@ import de.config.DatabaseConfig
 import io.ktor.server.application.Application
 
 fun Application.module() {
-    DatabaseConfig.validateEnvironmentVariables()
+    DatabaseConfig.init()
+
     configureSerialization()
     configureRouting()
 }

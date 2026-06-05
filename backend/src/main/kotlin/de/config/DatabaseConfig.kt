@@ -1,13 +1,43 @@
 package de.config
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import org.jetbrains.exposed.v1.jdbc.Database
+
 object DatabaseConfig {
 
-    fun validateEnvironmentVariables() {
-        requireEnvironmentVariable("DATABASE_URL")
-        requireEnvironmentVariable("DATABASE_USER")
-        requireEnvironmentVariable("DATABASE_PASSWORD")
+    fun init() {
+        val databaseUrl = requireEnvironmentVariable("DATABASE_URL")
+        val databaseUser = requireEnvironmentVariable("DATABASE_USER")
+        val databasePassword = requireEnvironmentVariable("DATABASE_PASSWORD")
 
-        println("Database environment variables were found.")
+        val dataSource = createDataSource(
+            databaseUrl = databaseUrl,
+            databaseUser = databaseUser,
+            databasePassword = databasePassword
+        )
+
+        Database.connect(dataSource)
+
+        println("Database connection pool was initialized.")
+    }
+
+    private fun createDataSource(
+        databaseUrl: String,
+        databaseUser: String,
+        databasePassword: String
+    ): HikariDataSource {
+        val hikariConfig = HikariConfig().apply {
+            jdbcUrl = databaseUrl
+            username = databaseUser
+            password = databasePassword
+
+            driverClassName = "org.postgresql.Driver"
+            maximumPoolSize = 5
+            poolName = "UltimateFitnessPool"
+        }
+
+        return HikariDataSource(hikariConfig)
     }
 
     private fun requireEnvironmentVariable(name: String): String {
