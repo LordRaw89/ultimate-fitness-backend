@@ -19,6 +19,9 @@ The app is designed around separate training domains instead of forcing every ac
 - Supabase
 - Kotlin
 - Ktor
+- Exposed DSL
+- PostgreSQL JDBC Driver
+- HikariCP Connection Pool
 
 ## Current Status
 
@@ -30,6 +33,13 @@ The app is designed around separate training domains instead of forcing every ac
 - Index scripts implemented
 - Initial Ktor backend created
 - Health endpoint implemented
+- Central Ktor application module configured
+- Local database credentials loaded through environment variables
+- PostgreSQL connection to Supabase configured through the Session Pooler
+- HikariCP connection pool integrated
+- Exposed connected to PostgreSQL
+- Startup database connection check implemented with SELECT 1
+- Database connection integration test implemented
 
 ## Database Structure
 
