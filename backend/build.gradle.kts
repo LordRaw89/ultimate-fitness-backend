@@ -26,6 +26,7 @@ dependencies {
     // Database access with Exposed DSL
     implementation("org.jetbrains.exposed:exposed-core:1.3.0")
     implementation("org.jetbrains.exposed:exposed-jdbc:1.3.0")
+    implementation("org.jetbrains.exposed:exposed-kotlin-datetime:1.3.0")
 
     // PostgreSQL JDBC driver
     implementation("org.postgresql:postgresql:42.7.11")
