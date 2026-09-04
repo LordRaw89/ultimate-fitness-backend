@@ -42,6 +42,8 @@ The app is designed around separate training domains instead of forcing every ac
 - Database connection integration test implemented
 - Profiles table mapped with Exposed
 - Training days table mapped with Exposed
+- Exercises table mapped with Exposed
+- Exercise categories table mapped with Exposed
 
 
 ## Database Structure
