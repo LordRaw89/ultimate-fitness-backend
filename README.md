@@ -40,6 +40,9 @@ The app is designed around separate training domains instead of forcing every ac
 - Exposed connected to PostgreSQL
 - Startup database connection check implemented with SELECT 1
 - Database connection integration test implemented
+- Profiles table mapped with Exposed
+- Training days table mapped with Exposed
+
 
 ## Database Structure
 
