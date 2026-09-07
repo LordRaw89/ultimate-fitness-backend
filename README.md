@@ -44,6 +44,10 @@ The app is designed around separate training domains instead of forcing every ac
 - Training days table mapped with Exposed
 - Exercises table mapped with Exposed
 - Exercise categories table mapped with Exposed
+- Strength entries table mapped with Exposed
+- Strength repetition sets table mapped with Exposed
+- Strength time sets table mapped with Exposed
+- Strength entry relationships to training days and exercises mapped
 
 
 ## Database Structure
