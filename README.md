@@ -54,6 +54,9 @@ The app is designed around separate training domains instead of forcing every ac
 - Difficulty grades table mapped with Exposed
 - Boulder routes table mapped with Exposed
 - Foreign key relationships for boulder entries, routes and difficulty grades mapped with Exposed
+- Muscle groups table mapped with Exposed
+- Exercise-to-muscle-group mapping table mapped with Exposed
+- Foreign key relationships between exercises and muscle groups mapped with Exposed
 
 ## Database Structure
 
