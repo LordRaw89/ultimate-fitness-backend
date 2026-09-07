@@ -48,6 +48,8 @@ The app is designed around separate training domains instead of forcing every ac
 - Strength repetition sets table mapped with Exposed
 - Strength time sets table mapped with Exposed
 - Strength entry relationships to training days and exercises mapped
+- Endurance entries table mapped with Exposed
+- Foreign key relationships from endurance entries to training days and exercises mapped with Exposed
 
 
 ## Database Structure
