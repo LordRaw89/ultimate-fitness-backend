@@ -99,9 +99,56 @@ Examples:
 
 ## Security
 
-User-owned tables use Row Level Security.
+Row Level Security (RLS) is enabled for all relevant public tables.
 
-The goal is that users can only access training data that belongs to their own profile.
+User-owned tables are restricted to authenticated users.
+
+Typical user-owned tables include:
+
+- `profiles`
+- `training_days`
+- `strength_entries`
+- `strength_rep_sets`
+- `strength_time_sets`
+- `endurance_entries`
+- `boulder_entries`
+- `boulder_routes`
+
+Access to these tables is restricted through RLS policies for:
+
+- `SELECT`
+- `INSERT`
+- `UPDATE`
+- `DELETE`
+
+Ownership is checked using `auth.uid()`.
+
+For tables that directly reference a user profile, access can be checked directly against the authenticated user's ID.
+
+For dependent tables, ownership is checked through the related parent table.
+
+Example for `strength_entries`:
+
+```sql
+EXISTS (
+    SELECT 1
+    FROM training_days td
+    WHERE td.training_day_id = strength_entries.training_day_id
+      AND td.profile_id = auth.uid()
+)
+```
+
+This ensures that users can only access strength entries that belong to one of their own training days.
+
+Global reference tables are readable by authenticated users but are not directly writable through normal RLS policies.
+
+These include:
+
+- `difficulty_grades`
+- `exercise_categories`
+- `exercise_muscle_groups`
+- `exercises`
+- `muscle_groups`
 
 ## Query Strategy
 
