@@ -8,10 +8,18 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 object DatabaseConfig {
 
     fun init() {
-        val databaseUrl = requireEnvironmentVariable("DATABASE_URL")
-        val databaseUser = requireEnvironmentVariable("DATABASE_USER")
-        val databasePassword = requireEnvironmentVariable("DATABASE_PASSWORD")
+        init(
+            databaseUrl = requireEnvironmentVariable("DATABASE_URL"),
+            databaseUser = requireEnvironmentVariable("DATABASE_USER"),
+            databasePassword = requireEnvironmentVariable("DATABASE_PASSWORD")
+        )
+    }
 
+    fun init(
+        databaseUrl: String,
+        databaseUser: String,
+        databasePassword: String
+    ) {
         val dataSource = createDataSource(
             databaseUrl = databaseUrl,
             databaseUser = databaseUser,
