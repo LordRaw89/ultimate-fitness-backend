@@ -1,0 +1,51 @@
+package de.profile
+
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.util.UUID
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+
+data class Profile(
+    val profileId: UUID,
+    val username: String
+)
+
+object ProfileRepository {
+
+    fun createProfile(
+        profileId: UUID,
+        username: String
+    ) {
+        transaction {
+            ProfilesTable.insert {
+                it[ProfilesTable.profileId] = profileId
+                it[ProfilesTable.username] = username
+            }
+        }
+    }
+
+    fun findById(profileId: UUID): Profile? {
+        return transaction {
+            ProfilesTable
+                .selectAll()
+                .where { ProfilesTable.profileId eq profileId }
+                .singleOrNull()
+                ?.let { row ->
+                    Profile(
+                        profileId = row[ProfilesTable.profileId],
+                        username = row[ProfilesTable.username]
+                    )
+                }
+        }
+    }
+
+    fun deleteProfile(profileId: UUID) {
+        transaction {
+            ProfilesTable.deleteWhere {
+                ProfilesTable.profileId eq profileId
+            }
+        }
+    }
+}
