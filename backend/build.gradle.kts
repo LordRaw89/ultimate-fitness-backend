@@ -38,4 +38,10 @@ dependencies {
     testImplementation(ktorLibs.server.testHost)
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
+
+    testImplementation(ktorLibs.client.core)
+    testImplementation(ktorLibs.client.cio)
+    testImplementation(ktorLibs.client.contentNegotiation)
+    testImplementation(ktorLibs.serialization.kotlinx.json)
 }
+
