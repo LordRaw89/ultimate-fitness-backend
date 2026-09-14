@@ -56,8 +56,8 @@ object ProfileRepository {
     fun updateUsername(
         profileId: UUID,
         username: String
-    ) {
-        transaction {
+    ): Int {
+        return transaction {
             ProfilesTable.update(
                 where = { ProfilesTable.profileId eq profileId }
             ) {

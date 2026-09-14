@@ -3,6 +3,7 @@ package de.profile
 import de.config.DatabaseConfig
 import de.testsupport.SupabaseAuthTestHelper
 import kotlinx.coroutines.runBlocking
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -184,5 +185,46 @@ class ProfileRepositoryTest {
         } finally {
             SupabaseAuthTestHelper.deleteTestUser(userId)
         }
+    }
+
+    @Test
+    fun `returns null for unknown profile id`() = runBlocking {
+
+        DatabaseConfig.init(
+            databaseUrl = System.getenv("TEST_DATABASE_URL")
+                ?: error("TEST_DATABASE_URL is not set."),
+            databaseUser = System.getenv("TEST_DATABASE_USER")
+                ?: error("TEST_DATABASE_USER is not set."),
+            databasePassword = System.getenv("TEST_DATABASE_PASSWORD")
+                ?: error("TEST_DATABASE_PASSWORD is not set.")
+        )
+
+        val unknownProfileId = UUID.randomUUID()
+
+        val profile = ProfileRepository.findById(unknownProfileId)
+
+        assertNull(profile)
+    }
+
+    @Test
+    fun `returns zero when updating unknown profile`() = runBlocking {
+
+        DatabaseConfig.init(
+            databaseUrl = System.getenv("TEST_DATABASE_URL")
+                ?: error("TEST_DATABASE_URL is not set."),
+            databaseUser = System.getenv("TEST_DATABASE_USER")
+                ?: error("TEST_DATABASE_USER is not set."),
+            databasePassword = System.getenv("TEST_DATABASE_PASSWORD")
+                ?: error("TEST_DATABASE_PASSWORD is not set.")
+        )
+
+        val unknownProfileId = UUID.randomUUID()
+
+        val updatedRows = ProfileRepository.updateUsername(
+            profileId = unknownProfileId,
+            username = "does-not-exist"
+        )
+
+        assertEquals(0, updatedRows)
     }
 }
