@@ -7,7 +7,7 @@ import org.jetbrains.exposed.v1.datetime.timestampWithTimeZone
 
 object StrengthEntriesTable : Table("public.strength_entries") {
 
-    val strengthEntryId = long("strength_entry_id")
+    val strengthEntryId = long("strength_entry_id").autoIncrement()
 
     val trainingDayId = reference(
         "training_day_id",
