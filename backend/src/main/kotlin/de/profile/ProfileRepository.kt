@@ -1,17 +1,18 @@
 package de.profile
 
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import java.util.UUID
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-
+import java.util.UUID
+import java.time.OffsetDateTime
 
 data class Profile(
     val profileId: UUID,
-    val username: String
+    val username: String,
+    val updatedAt: OffsetDateTime
 )
 
 object ProfileRepository {
@@ -37,7 +38,8 @@ object ProfileRepository {
                 ?.let { row ->
                     Profile(
                         profileId = row[ProfilesTable.profileId],
-                        username = row[ProfilesTable.username]
+                        username = row[ProfilesTable.username],
+                        updatedAt = row[ProfilesTable.updatedAt]
                     )
                 }
         }
@@ -60,6 +62,7 @@ object ProfileRepository {
                 where = { ProfilesTable.profileId eq profileId }
             ) {
                 it[ProfilesTable.username] = username
+                it[ProfilesTable.updatedAt] = OffsetDateTime.now()
             }
         }
     }

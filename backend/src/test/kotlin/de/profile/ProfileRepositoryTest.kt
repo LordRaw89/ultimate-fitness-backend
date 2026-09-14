@@ -7,6 +7,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertFails
+import kotlin.test.assertTrue
+import kotlin.test.assertNull
 
 class ProfileRepositoryTest {
 
@@ -122,18 +124,64 @@ class ProfileRepositoryTest {
                 username = originalUsername
             )
 
+            val profileBeforeUpdate = ProfileRepository.findById(userId)
+
+            assertNotNull(profileBeforeUpdate)
+
             ProfileRepository.updateUsername(
                 profileId = userId,
                 username = updatedUsername
             )
 
-            val profile = ProfileRepository.findById(userId)
+            val profileAfterUpdate = ProfileRepository.findById(userId)
 
-            assertNotNull(profile)
-            assertEquals(updatedUsername, profile.username)
+            assertNotNull(profileAfterUpdate)
+            assertEquals(updatedUsername, profileAfterUpdate.username)
+
+            assertTrue(
+                profileAfterUpdate.updatedAt.isAfter(profileBeforeUpdate.updatedAt)
+            )
 
         } finally {
             ProfileRepository.deleteProfile(userId)
+            SupabaseAuthTestHelper.deleteTestUser(userId)
+        }
+    }
+
+    @Test
+    fun `deletes profile`() = runBlocking {
+
+        DatabaseConfig.init(
+            databaseUrl = System.getenv("TEST_DATABASE_URL")
+                ?: error("TEST_DATABASE_URL is not set."),
+            databaseUser = System.getenv("TEST_DATABASE_USER")
+                ?: error("TEST_DATABASE_USER is not set."),
+            databasePassword = System.getenv("TEST_DATABASE_PASSWORD")
+                ?: error("TEST_DATABASE_PASSWORD is not set.")
+        )
+
+        val userId = SupabaseAuthTestHelper.createTestUser(
+            email = "delete-${System.currentTimeMillis()}@example.com",
+            password = "TestPassword123!"
+        )
+
+        val username = "delete-user-${System.currentTimeMillis()}"
+
+        try {
+            ProfileRepository.createProfile(
+                profileId = userId,
+                username = username
+            )
+
+            val profileBeforeDelete = ProfileRepository.findById(userId)
+            assertNotNull(profileBeforeDelete)
+
+            ProfileRepository.deleteProfile(userId)
+
+            val profileAfterDelete = ProfileRepository.findById(userId)
+            assertNull(profileAfterDelete)
+
+        } finally {
             SupabaseAuthTestHelper.deleteTestUser(userId)
         }
     }
