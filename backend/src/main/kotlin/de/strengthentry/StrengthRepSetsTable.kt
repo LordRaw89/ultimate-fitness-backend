@@ -5,7 +5,7 @@ import org.jetbrains.exposed.v1.datetime.timestampWithTimeZone
 
 object StrengthRepSetsTable : Table("public.strength_rep_sets") {
 
-    val strengthRepSetId = long("strength_rep_set_id")
+    val strengthRepSetId = long("strength_rep_set_id").autoIncrement()
 
     val strengthEntryId = reference(
         "strength_entry_id",
@@ -16,7 +16,7 @@ object StrengthRepSetsTable : Table("public.strength_rep_sets") {
 
     val reps = short("reps")
 
-    val weightKg = decimal("weight_kg", precision = 8, scale = 2).nullable()
+    val weightKg = decimal("weight_kg", precision = 8, scale = 2)
 
     val notes = text("notes").nullable()
 
