@@ -7,6 +7,16 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 object DatabaseConfig {
 
+    private var dataSource: HikariDataSource? = null
+
+    private var currentConfig: DatabaseConnectionConfig? = null
+
+    private data class DatabaseConnectionConfig(
+        val databaseUrl: String,
+        val databaseUser: String,
+        val databasePassword: String
+    )
+
     fun init() {
         init(
             databaseUrl = requireEnvironmentVariable("DATABASE_URL"),
@@ -15,21 +25,61 @@ object DatabaseConfig {
         )
     }
 
+    @Synchronized
     fun init(
         databaseUrl: String,
         databaseUser: String,
         databasePassword: String
     ) {
-        val dataSource = createDataSource(
+        val requestedConfig = DatabaseConnectionConfig(
             databaseUrl = databaseUrl,
             databaseUser = databaseUser,
             databasePassword = databasePassword
         )
 
-        Database.connect(dataSource)
-        testConnection()
+        val existingDataSource = dataSource
 
-        println("Database connection pool was initialized.")
+        if (
+            currentConfig == requestedConfig &&
+            existingDataSource != null &&
+            !existingDataSource.isClosed
+        ) {
+            return
+        }
+
+        existingDataSource?.close()
+
+        val newDataSource = createDataSource(
+            databaseUrl = databaseUrl,
+            databaseUser = databaseUser,
+            databasePassword = databasePassword
+        )
+
+        try {
+            Database.connect(newDataSource)
+
+            dataSource = newDataSource
+            currentConfig = requestedConfig
+
+            testConnection()
+
+            println("Database connection pool was initialized.")
+        } catch (exception: Exception) {
+            newDataSource.close()
+
+            dataSource = null
+            currentConfig = null
+
+            throw exception
+        }
+    }
+
+    @Synchronized
+    fun shutdown() {
+        dataSource?.close()
+
+        dataSource = null
+        currentConfig = null
     }
 
     private fun createDataSource(
@@ -43,7 +93,10 @@ object DatabaseConfig {
             password = databasePassword
 
             driverClassName = "org.postgresql.Driver"
+
             maximumPoolSize = 5
+            minimumIdle = 1
+
             poolName = "UltimateFitnessPool"
         }
 

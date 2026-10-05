@@ -1,7 +1,6 @@
 package de.config
 
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.junit.Test
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
@@ -9,13 +8,25 @@ class DatabaseConnectionTest {
 
     @Test
     fun `database connection executes select one successfully`() {
-        DatabaseConfig.init()
+        DatabaseConfig.init(
+            databaseUrl = System.getenv("TEST_DATABASE_URL")
+                ?: error("TEST_DATABASE_URL is not set."),
+            databaseUser = System.getenv("TEST_DATABASE_USER")
+                ?: error("TEST_DATABASE_USER is not set."),
+            databasePassword = System.getenv("TEST_DATABASE_PASSWORD")
+                ?: error("TEST_DATABASE_PASSWORD is not set.")
+        )
 
-        transaction {
+        val result = transaction {
             exec("SELECT 1") { resultSet ->
-                assertTrue(resultSet.next())
-                assertEquals(1, resultSet.getInt(1))
+                if (resultSet.next()) {
+                    resultSet.getInt(1)
+                } else {
+                    null
+                }
             }
         }
+
+        assertEquals(1, result)
     }
 }
