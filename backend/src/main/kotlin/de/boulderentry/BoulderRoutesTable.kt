@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.datetime.timestampWithTimeZone
 
 object BoulderRoutesTable : Table("public.boulder_routes") {
 
-    val boulderRouteId = long("boulder_route_id")
+    val boulderRouteId = long("boulder_route_id").autoIncrement()
 
     val boulderEntryId = reference(
         "boulder_entry_id",
