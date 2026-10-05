@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.datetime.timestampWithTimeZone
 
 object ExerciseMuscleGroupsTable : Table("public.exercise_muscle_groups") {
 
-    val exerciseMuscleGroupId = long("exercise_muscle_group_id")
+    val exerciseMuscleGroupId = long("exercise_muscle_group_id").autoIncrement()
 
     val exerciseId = reference(
         "exercise_id",
