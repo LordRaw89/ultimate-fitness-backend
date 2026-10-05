@@ -5,7 +5,7 @@ import org.jetbrains.exposed.v1.datetime.timestampWithTimeZone
 
 object DifficultyGradesTable : Table("public.difficulty_grades") {
 
-    val difficultyGradeId = long("difficulty_grade_id")
+    val difficultyGradeId = long("difficulty_grade_id").autoIncrement()
 
     val difficultyGrade = text("difficulty_grade")
 
