@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.datetime.timestampWithTimeZone
 
 object ExercisesTable : Table("public.exercises") {
 
-    val exerciseId = long("exercise_id")
+    val exerciseId = long("exercise_id").autoIncrement()
 
     val exerciseName = text("exercise_name")
 
