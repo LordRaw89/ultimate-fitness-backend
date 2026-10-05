@@ -1,34 +1,419 @@
 # Database Test Protocol
 
-This document describes the manual database tests performed for the Ultimate Fitness backend database.
+This document describes the current database and repository test strategy for the Ultimate Fitness backend.
+
+It preserves the original manual database verification and documents the automated repository integration tests that now protect the implemented backend data-access layer.
 
 ## Purpose
 
-The goal of these tests is to verify that the database model works for realistic fitness tracking scenarios and that important constraints prevent invalid data.
+The goal of the database tests is to verify that:
+
+- the database model works for realistic fitness tracking scenarios
+- foreign keys and database constraints reject invalid data
+- repository code correctly reads and writes the database
+- seed-based reference data can be queried correctly
+- Supabase Auth test users can be created and cleaned up safely
+- the complete repository integration-test suite can run against the local Supabase stack
 
 ## Test Environment
 
-- Database: Supabase / PostgreSQL
-- Test user: testuser
-- Test date: 2026-05-11
+Current environment:
 
-## Tested Areas
+- Database: local Supabase / PostgreSQL
+- Backend: Kotlin / Ktor
+- Database access: Exposed DSL
+- Connection pool: HikariCP
+- Authentication test support: local Supabase Auth
+- Test runner: Gradle / Kotlin test
 
-The following areas were tested manually:
+Required environment variables:
 
-- User profile creation
-- Training day creation
-- Strength training entries
-- Strength repetition-based sets
-- Strength time-based sets
-- Endurance entries
-- Bouldering entries
-- Bouldering routes
-- Difficulty grade mapping
-- Database constraints
-- Basic full training day query behavior
+```text
+TEST_DATABASE_URL
+TEST_DATABASE_USER
+TEST_DATABASE_PASSWORD
+TEST_SUPABASE_URL
+TEST_SUPABASE_SECRET_KEY
+```
 
-## Positive Tests
+The local test environment is loaded with `direnv`.
+
+`.env.test` contains local credentials and must not be committed.
+
+`.envrc` loads `.env.test` and can be version controlled because it contains no credentials itself.
+
+## Local Database Setup
+
+The local Supabase database can be recreated with:
+
+```bash
+supabase db reset
+```
+
+The database schema is recreated and seed files are applied in dependency order.
+
+Current seed files:
+
+```text
+supabase/seeds/02_seed_core_data.sql
+supabase/seeds/03_seed_exercises.sql
+supabase/seeds/04_seed_exercises_muscle_groups.sql
+```
+
+Seed data provides reference data for:
+
+- exercise categories
+- muscle groups
+- difficulty grades
+- exercises
+- exercise-to-muscle-group mappings
+
+Repository tests use seeded records instead of relying on fixed identity IDs.
+
+## Automated Repository Integration Tests
+
+Repository integration tests now cover the current repository layer.
+
+The complete backend test suite currently contains **108 tests** and passes successfully.
+
+Run the complete suite with:
+
+```bash
+./gradlew test
+```
+
+Run a single repository test class with:
+
+```bash
+./gradlew test --tests "de.exercise.ExerciseRepositoryTest"
+```
+
+These are integration tests, not isolated unit tests.
+
+They perform real local Supabase/PostgreSQL I/O and therefore use `runBlocking`.
+
+## Database Connection Pool During Tests
+
+Each test class may call `DatabaseConfig.init(...)`.
+
+`DatabaseConfig` reuses the existing HikariCP pool when the requested database configuration is unchanged.
+
+This is important because creating a new HikariCP pool for every individual test can exhaust PostgreSQL's available connections during the complete test suite.
+
+Current behavior:
+
+```text
+first initialization
+→ create HikariCP pool
+
+same configuration again
+→ reuse existing pool
+
+different configuration
+→ close old pool
+→ create new pool
+```
+
+The pool currently has a maximum size of 5 connections.
+
+## Supabase Auth Test Users
+
+Tests that require a profile use `SupabaseAuthTestHelper`.
+
+Typical lifecycle:
+
+```text
+Create temporary Supabase Auth user
+→ Create profile using the same UUID
+→ Create required training data
+→ Execute assertions
+→ Delete child records
+→ Delete profile
+→ Delete Supabase Auth user
+```
+
+Cleanup is performed with `try/finally`.
+
+`profiles.profile_id` and `auth.users.id` use the same UUID but represent separate database records.
+
+Deleting a profile is therefore separate from deleting the Supabase Auth user.
+
+## Current Automated Coverage
+
+### Profiles
+
+Covered behavior includes:
+
+- create profile
+- read profile
+- reject duplicate username
+- update username
+- verify `updated_at` changes
+- delete profile
+- unknown ID returns `null`
+- updating unknown ID returns `0`
+
+### Training Days
+
+Covered behavior includes:
+
+- create training day
+- read training day
+- update notes
+- clear notes
+- verify `updated_at` changes
+- delete training day
+- unknown ID returns `null`
+- updating unknown ID returns `0`
+- reject duplicate `(profile_id, training_date)`
+- allow same date for different profiles
+- reject missing profile foreign key
+
+### Strength Entries
+
+Covered behavior includes:
+
+- create strength entry
+- read strength entry
+- update notes
+- clear notes
+- verify `updated_at` changes
+- delete strength entry
+- unknown ID returns `null`
+- updating unknown ID returns `0`
+- reject duplicate `(training_day_id, exercise_id)`
+- allow same exercise on different training days
+- reject missing training day foreign key
+- reject missing exercise foreign key
+
+Seed exercises are looked up by name rather than hard-coded identity IDs.
+
+### Strength Rep Sets
+
+Covered behavior includes:
+
+- create repetition set
+- read repetition set
+- update set values
+- verify `updated_at` changes
+- delete repetition set
+- reject duplicate `(strength_entry_id, set_number)`
+- reject `set_number = 0`
+- reject `reps = 0`
+- reject negative `weight_kg`
+- allow `weight_kg = 0`
+- reject missing strength entry foreign key
+- unknown ID returns `null`
+- updating unknown ID returns `0`
+
+Verified database constraints include:
+
+```text
+set_number > 0
+reps > 0
+weight_kg >= 0
+```
+
+### Strength Time Sets
+
+Covered behavior includes:
+
+- create time set
+- read time set
+- update time set
+- clear notes
+- verify `updated_at` changes
+- delete time set
+- reject duplicate `(strength_entry_id, set_number)`
+- reject `set_number = 0`
+- reject `duration_sec = 0`
+- reject missing strength entry foreign key
+- unknown ID returns `null`
+- updating unknown ID returns `0`
+
+Verified constraint:
+
+```text
+duration_sec > 0
+```
+
+### Endurance Entries
+
+Covered behavior includes:
+
+- create endurance entry
+- read endurance entry
+- update duration and notes
+- clear notes
+- verify `updated_at` changes
+- delete endurance entry
+- reject `duration_sec = 0`
+- reject missing training day foreign key
+- reject missing exercise foreign key
+- allow the same exercise multiple times on the same training day
+- unknown ID returns `null`
+- updating unknown ID returns `0`
+
+Verified constraint:
+
+```text
+duration_sec > 0
+```
+
+The database currently has no unique constraint on `(training_day_id, exercise_id)` for endurance entries.
+
+### Boulder Entries
+
+Covered behavior includes:
+
+- create boulder entry
+- read boulder entry
+- update notes
+- clear notes
+- verify `updated_at` changes
+- delete boulder entry
+- reject missing training day foreign key
+- allow multiple boulder entries on the same training day
+- unknown ID returns `null`
+- updating unknown ID returns `0`
+
+The database currently has no unique constraint on `training_day_id` for boulder entries.
+
+### Boulder Routes
+
+Covered behavior includes:
+
+- create route
+- read route
+- update route
+- verify `updated_at` changes
+- clear nullable fields
+- delete route
+- allow nullable `difficulty_grade_id`
+- allow nullable `route_name`
+- allow nullable `notes`
+- reject `attempts = 0`
+- reject invalid `result`
+- accept all valid `result` values
+- reject missing boulder entry foreign key
+- reject missing difficulty grade foreign key
+- unknown ID returns `null`
+- updating unknown ID returns `0`
+
+Allowed `result` values:
+
+```text
+attempted
+zone
+top
+flash
+```
+
+Verified constraints:
+
+```text
+attempts > 0
+result in ('attempted', 'zone', 'top', 'flash')
+```
+
+### Difficulty Grades
+
+This repository is intentionally read-only.
+
+Covered behavior includes:
+
+- `findAll()`
+- `findById(...)`
+- `findBySystem(...)`
+- `findAllSystems()`
+- unknown ID returns `null`
+- unknown system returns an empty list
+- returned grades match the selected grading system
+- grading systems are returned without duplicates
+
+### Exercise Categories
+
+This repository is intentionally read-only.
+
+Covered behavior includes:
+
+- `findAll()`
+- `findById(...)`
+- `findByName(...)`
+- unknown ID returns `null`
+- unknown name returns `null`
+
+### Exercises
+
+This repository is intentionally read-only.
+
+Covered behavior includes:
+
+- `findAll()`
+- `findById(...)`
+- `findByCategoryId(...)`
+- `findByName(...)`
+- unknown ID returns `null`
+- unknown category returns an empty list
+- unknown name returns an empty list
+- category filtering only returns exercises from the selected category
+- name filtering only returns exercises with the selected name
+
+`exercise_name` is not currently unique, so `findByName(...)` returns a list.
+
+### Muscle Groups
+
+This repository is intentionally read-only.
+
+Covered behavior includes:
+
+- `findAll()`
+- `findById(...)`
+- `findByName(...)`
+- unknown ID returns `null`
+- unknown name returns `null`
+
+### Exercise Muscle Groups
+
+This repository is intentionally read-only.
+
+Covered behavior includes:
+
+- `findAll()`
+- `findById(...)`
+- `findByExerciseId(...)`
+- `findByMuscleGroupId(...)`
+- unknown mapping ID returns `null`
+- unknown exercise returns an empty list
+- unknown muscle group returns an empty list
+- exercise filtering only returns mappings for the selected exercise
+- muscle-group filtering only returns mappings for the selected muscle group
+
+Current database role values are:
+
+```text
+primary
+secondary
+stabilizing
+```
+
+## Original Manual Database Verification
+
+Before the automated repository layer existed, the database model was manually tested with realistic records.
+
+The following areas were verified manually:
+
+- user profile creation
+- training day creation
+- strength training entries
+- strength repetition-based sets
+- strength time-based sets
+- endurance entries
+- bouldering entries
+- bouldering routes
+- difficulty grade mapping
+- database constraints
+- combined training-day query behavior
 
 ### Profile
 
@@ -37,7 +422,7 @@ A test user was created in Supabase Auth and linked to a profile record.
 Verified:
 
 - `profiles.profile_id` correctly references the Supabase Auth user ID
-- `username`, `display_name`, `birthdate`, `weight_kg`, `height_cm` and `gender` were stored correctly
+- profile fields were stored correctly
 - `created_at` and `updated_at` were set automatically
 
 ### Training Day
@@ -48,8 +433,8 @@ Verified:
 
 - `training_days.profile_id` correctly references the profile
 - `training_date` was stored correctly
-- Notes were stored correctly
-- The training day can be used as the central anchor for strength, endurance and bouldering entries
+- notes were stored correctly
+- the training day can act as the central anchor for strength, endurance and bouldering entries
 
 ### Strength Entries
 
@@ -59,7 +444,7 @@ Verified:
 
 - `strength_entries.training_day_id` correctly references the training day
 - `strength_entries.exercise_id` correctly references the exercise
-- A strength entry represents one specific exercise on one specific training day
+- one strength entry represents one exercise on one training day
 
 ### Strength Rep Sets
 
@@ -67,23 +452,21 @@ Three repetition-based sets were inserted for `Ring Push Ups`.
 
 Verified:
 
-- Set numbers were stored correctly
-- Repetitions were stored correctly
+- set numbers were stored correctly
+- repetitions were stored correctly
 - `weight_kg = 0` works for bodyweight exercises
-- Notes were stored correctly
+- notes were stored correctly
 
 ### Strength Time Sets
 
 A strength entry was created for `Ring L-Sit`.
 
-Two time-based sets were inserted.
-
 Verified:
 
-- Time-based strength exercises can be tracked separately from repetition-based strength exercises
+- time-based strength exercises can be tracked separately from repetition-based strength exercises
 - `duration_sec` was stored correctly
-- Set numbers were stored correctly
-- Notes were stored correctly
+- set numbers were stored correctly
+- notes were stored correctly
 
 ### Endurance Entries
 
@@ -94,7 +477,7 @@ Verified:
 - `endurance_entries.training_day_id` correctly references the training day
 - `endurance_entries.exercise_id` correctly references the endurance exercise
 - `duration_sec` was stored correctly
-- The endurance module works independently from the strength module
+- the endurance module works independently from the strength module
 
 ### Bouldering Entries
 
@@ -103,152 +486,44 @@ A bouldering entry was created for the test training day.
 Verified:
 
 - `boulder_entries.training_day_id` correctly references the training day
-- A bouldering session can exist independently from the exercise catalog
-- The bouldering module is separate from the strength and endurance modules
+- a bouldering session can exist independently from the exercise catalog
+- the bouldering module is separate from the strength and endurance modules
 
 ### Boulder Routes
 
 A boulder route was inserted for the bouldering entry.
 
-Test route:
-
-- Route name: `Blue Overhang Test Route`
-- Difficulty grade: `6A`
-- Difficulty system: `Fontainebleau`
-- Attempts: `3`
-- Result: `top`
-
-Verified:
+The manual test verified:
 
 - `boulder_routes.boulder_entry_id` correctly references the bouldering entry
 - `difficulty_grade_id` correctly references `difficulty_grades`
-- `difficulty_grade_id` may remain `NULL` for outdoor or unknown grades
-- Attempts were stored correctly
-- Result was stored correctly
-
-## Negative Tests
-
-The following tests were expected to fail.  
-They confirm that database constraints correctly reject invalid data.
-
-### Duplicate Training Day
-
-Attempted to create a second `training_days` record for the same user and date.
-
-Expected result:
-
-- Insert is rejected
-- Unique constraint on `(profile_id, training_date)` works correctly
-
-### Duplicate Strength Entry
-
-Attempted to create a second `strength_entries` record for the same training day and exercise.
-
-Expected result:
-
-- Insert is rejected
-- Unique constraint on `(training_day_id, exercise_id)` works correctly
-
-### Duplicate Rep Set Number
-
-Attempted to insert a second repetition-based set with the same `strength_entry_id` and `set_number`.
-
-Expected result:
-
-- Insert is rejected
-- Unique constraint on `(strength_entry_id, set_number)` works correctly
-
-### Invalid Strength Rep Set Values
-
-Tested invalid values for repetition-based strength sets.
-
-Expected results:
-
-- `set_number = 0` is rejected
-- `reps = 0` is rejected
-- negative `weight_kg` is rejected
-
-Verified constraints:
-
-- `set_number > 0`
-- `reps > 0`
-- `weight_kg >= 0`
-
-### Invalid Strength Time Set Values
-
-Tested invalid values for time-based strength sets.
-
-Expected result:
-
-- `duration_sec = 0` is rejected
-
-Verified constraint:
-
-- `duration_sec > 0`
-
-### Invalid Endurance Values
-
-Tested invalid values for endurance entries.
-
-Expected result:
-
-- `duration_sec = 0` is rejected
-
-Verified constraint:
-
-- `duration_sec > 0`
-
-### Invalid Boulder Route Values
-
-Tested invalid values for boulder routes.
-
-Expected results:
-
-- `attempts = 0` is rejected
-- invalid `result` value is rejected
-
-Allowed `result` values:
-
-- `attempted`
-- `zone`
-- `top`
-- `flash`
-
-Verified constraints:
-
-- `attempts > 0`
-- `result in ('attempted', 'zone', 'top', 'flash')`
+- `difficulty_grade_id` may remain `NULL`
+- attempts were stored correctly
+- result was stored correctly
 
 ## Query Behavior
 
-A combined full training day query was tested with strength, endurance and bouldering data.
+A combined full training-day query was manually tested with strength, endurance and bouldering data.
 
-Result:
-
-- The query successfully joined all modules through `training_days`
-- Strength entries, endurance entries and bouldering routes were all reachable from one training day
-- Difficulty grades could be joined correctly for boulder routes
+The query confirmed that all modules are reachable through `training_days`.
 
 Important observation:
 
-A single large flat SQL query over several one-to-many relationships can create duplicated rows because the joined modules multiply each other.
+A single large flat SQL query over several one-to-many relationships can create duplicated rows because joined child collections multiply each other.
 
-Example:
+Therefore the backend should not load a full training day as one large flat join.
 
-- 2 strength entries
-- 1 endurance entry
-- 1 boulder route
+Preferred approach:
 
-Result:
+```text
+TrainingDayService
+├── load training day
+├── load strength entries
+├── load endurance entries
+└── load bouldering entries/routes
+```
 
-- 2 rows in a flat join result
-
-Conclusion:
-
-For the future Ktor backend, the training day should not be loaded as one large flat join query.  
-Instead, the backend should use smaller focused queries and assemble a structured response.
-
-Preferred backend structure:
+The service layer can then assemble a structured response such as:
 
 ```json
 {
@@ -257,40 +532,65 @@ Preferred backend structure:
   "endurance": [],
   "bouldering": []
 }
+```
 
-## Open / Future Tests
+## What Repository Tests Do Not Yet Prove
 
-The following tests were not completed yet and should be added later:
+The repository tests connect directly to PostgreSQL.
 
-### Row Level Security Test
+They verify repository behavior and database constraints, but they do not replace end-to-end API or RLS/security tests.
 
-A second test user should be created to verify that users cannot access each other's training data.
+The following areas remain separate future work.
 
-Planned checks:
+### Row Level Security / Authorization Tests
+
+Planned checks include:
 
 - User A cannot read User B's `training_days`
 - User A cannot insert entries for User B's training day
-- User A cannot update or delete User B's data
+- User A cannot update User B's data
+- User A cannot delete User B's data
+- normal authenticated users cannot modify reference tables
 
-### Backend Integration Tests
+These tests should exercise the authentication/RLS path rather than only direct repository database access.
 
-Once the Ktor backend exists, integration tests should verify that API endpoints correctly create and read:
+### Service Unit Tests
 
-- training days
-- strength entries
-- repetition-based sets
-- time-based sets
-- endurance entries
-- bouldering entries
-- bouldering routes
+Planned for the next backend phase.
 
-### Automated Database Tests
+They should test:
 
-In a later CI/CD setup, database tests should verify:
+- business validation
+- conflict handling
+- repository coordination
+- domain result types
+- authorization-related decisions
 
-- schema creation
-- seed data insertion
-- constraints
-- indexes
-- RLS policies
-- basic insert and read workflows
+These tests should use fakes or mocks where appropriate and can use `runTest`.
+
+### API Integration Tests
+
+Planned after services and routes are implemented.
+
+They should verify complete flows:
+
+```text
+HTTP Request
+→ Route
+→ Service
+→ Repository
+→ Database
+→ HTTP Response
+```
+
+### CI/CD
+
+A later GitHub Actions setup should run the appropriate automated test suite and verify that the backend remains reproducible.
+
+## Current Conclusion
+
+The repository and repository-integration-test phase is complete.
+
+All current repository areas are covered and the full backend test suite passes.
+
+The next planned development phase is the service layer.

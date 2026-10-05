@@ -1,15 +1,15 @@
 # Backend Architecture
 
-This document describes the planned backend architecture for the Ultimate Fitness project.
+This document describes the current backend architecture for the Ultimate Fitness project.
 
-The backend is built with Kotlin and Ktor.  
+The backend is built with Kotlin and Ktor.
 Its purpose is to provide a controlled API layer between the client application and the PostgreSQL/Supabase database.
 
-The backend should not only pass data through. It should also handle validation, security, error handling and clean API responses.
+The backend should not only pass data through. It should also handle validation, security, business rules, error handling and clean API responses.
 
 ## Current Backend Status
 
-The initial Ktor backend project has been created inside the `backend/` directory.
+The Ktor backend project exists inside the `backend/` directory.
 
 The server can be started locally with:
 
@@ -23,7 +23,7 @@ On Windows:
 .\gradlew.bat run
 ```
 
-The first health endpoint is available at:
+The health endpoint is available at:
 
 ```text
 GET /health
@@ -44,33 +44,36 @@ Currently implemented:
 - JSON response works
 - `GET /health` is implemented
 - PostgreSQL/Supabase database structure created
-- core fitness tables created
+- Core fitness tables created
 - Row Level Security enabled for relevant tables
-- authenticated user policies configured for user-owned data
-- read-only RLS access configured for global reference tables
+- Authenticated-user policies configured for user-owned data
+- Read-only RLS access configured for global reference tables
+- Exposed table mappings implemented
+- Repository layer implemented
+- Coroutine-friendly repository functions implemented with `suspend`
+- Exposed database work uses `suspendTransaction`
+- Write repositories implemented for user-owned training data
+- Read-only repositories implemented for global reference data
+- Local Supabase seed data configured
+- Supabase Auth test helper implemented
+- Repository integration tests implemented
+- Complete backend test suite currently passes with 108 tests
+- HikariCP connection pool reuse implemented for repeated test initialization
 
-## Main Responsibilities
+The next planned backend milestone is the service layer.
 
-The backend is responsible for:
+## Layer Structure
 
-- exposing HTTP endpoints for the client
-- validating incoming data before writing it to the database
-- reading data from the database through repositories
-- assembling structured API responses
-- handling authentication and authorization
-- returning consistent error responses
-- keeping database access out of the client application
-
-The database still protects important rules through constraints and Row Level Security.  
-The backend adds an additional controlled application layer on top.
-
-## Planned Layer Structure
-
-The backend should be separated into clear layers.
+The backend follows this structure:
 
 ```text
-Route → Service → Repository → Database
+Route
+→ Service
+→ Repository
+→ Database
 ```
+
+The layers have separate responsibilities and should remain independent where possible.
 
 ### Route
 
@@ -82,37 +85,195 @@ Examples:
 - `GET /exercises`
 - `POST /training-days`
 
-Routes should stay thin.  
-They should not contain SQL queries or complex business logic.
+Routes should stay thin.
+
+They should be responsible for tasks such as:
+
+- reading request parameters
+- reading authenticated user information
+- deserializing request DTOs
+- calling the appropriate service
+- translating service results into HTTP responses
+
+Routes should not contain SQL queries or complex business logic.
 
 ### Service
 
 Services contain application and business logic.
 
-They decide:
+The service layer is not implemented yet and is the next planned development phase.
 
-- whether input data is valid
-- which repository methods are needed
-- how errors should be handled
-- how the final response should be assembled
+Services will be responsible for:
+
+- validating business rules
+- coordinating one or more repositories
+- deciding which repository operations are required
+- handling domain-level conflicts
+- composing richer application/domain objects
+- making authorization-related decisions
+- returning domain-level results to routes
+
+Example:
+
+```text
+POST /training-days
+        ↓
+TrainingDayRoute
+        ↓
+TrainingDayService
+        ↓
+TrainingDayRepository
+        ↓
+PostgreSQL
+```
+
+A service should not return HTTP-specific values such as `HttpStatusCode`.
+
+Instead, expected domain outcomes can later be represented through domain result types, for example:
+
+```text
+Success
+AlreadyExists
+ValidationError
+```
+
+The route is responsible for translating those outcomes into HTTP responses such as `201 Created`, `400 Bad Request` or `409 Conflict`.
 
 ### Repository
 
-Repositories are responsible for database access.
+Repositories are responsible only for database access.
 
-They contain SQL queries and return data to the service layer.
+Repository responsibilities:
+
+- execute Exposed queries
+- map database rows to Kotlin data classes
+- expose database operations to the service layer
+- keep SQL/database access out of routes and services
+
+Repositories should not contain:
+
+- HTTP-specific behavior
+- request/response handling
+- business workflows
+- UI logic
+
+Repository functions are coroutine-friendly:
+
+```text
+suspend fun ...
+```
+
+Database work uses:
+
+```text
+suspendTransaction
+```
 
 ### DTO
 
 DTOs define the data that enters or leaves the API.
 
-The API model should not blindly expose the internal database tables.
+The API model should not blindly expose internal database tables.
+
+DTOs will be added as the HTTP/API layer grows.
+
+## Repository Layer
+
+### Write Repositories
+
+Repositories that manage user-owned training data currently include:
+
+- Profiles
+- Training Days
+- Strength Entries
+- Strength Rep Sets
+- Strength Time Sets
+- Endurance Entries
+- Boulder Entries
+- Boulder Routes
+
+These repositories support the database operations required by the current model, including create, read, update and delete operations where applicable.
+
+### Read-Only Reference Repositories
+
+Global reference data is intentionally exposed through read-only repositories.
+
+Current read-only repositories:
+
+- Difficulty Grades
+- Exercise Categories
+- Exercises
+- Muscle Groups
+- Exercise Muscle Groups
+
+These repositories support frontend use cases such as:
+
+- loading all difficulty grades
+- loading available difficulty grading systems
+- filtering difficulty grades by system
+- loading exercises
+- filtering exercises by category
+- finding exercises by name
+- loading muscle groups
+- finding muscle groups by name
+- loading exercise-to-muscle-group relationships by exercise
+- loading exercise-to-muscle-group relationships by muscle group
+
+The application repository layer does not expose create, update or delete methods for these reference tables.
+
+## Database Model
+
+The central training structure uses `training_days` as the anchor.
+
+```text
+training_days
+├── strength_entries
+│   ├── strength_rep_sets
+│   └── strength_time_sets
+├── endurance_entries
+└── boulder_entries
+    └── boulder_routes
+```
+
+Additional reference relationships include:
+
+```text
+strength_entries
+└── exercises
+
+endurance_entries
+└── exercises
+
+exercises
+├── exercise_categories
+└── exercise_muscle_groups
+    └── muscle_groups
+
+boulder_routes
+└── difficulty_grades
+```
+
+This keeps strength, endurance and bouldering separate while allowing them to belong to the same training day.
+
+## Database Connection Management
+
+Database access uses HikariCP and Exposed.
+
+`DatabaseConfig` maintains a reusable HikariCP data source.
+
+Repeated calls using the same database configuration reuse the existing pool instead of creating a new pool for every test or initialization call.
+
+This prevents PostgreSQL connection exhaustion when the complete integration-test suite is executed.
+
+If a different database configuration is requested, the previous pool is closed before a new one is created.
+
+The configured pool currently uses a maximum size of 5 connections.
 
 ## Security Approach
 
 Security is handled in multiple layers.
 
-The backend validates incoming requests and controls which operations are allowed.  
+The backend validates incoming requests and controls which operations are allowed.
 The database additionally protects important rules through constraints and Row Level Security (RLS).
 
 The basic principles are:
@@ -123,6 +284,7 @@ The basic principles are:
 - Row Level Security is enabled for all relevant public tables
 - RLS policies are restricted to the `authenticated` role where appropriate
 - database constraints should reject invalid data even if backend validation fails
+- backend services will add an additional authorization and validation layer
 
 ### Row Level Security
 
@@ -152,7 +314,7 @@ EXISTS (
 
 This ensures that users can only access strength entries that belong to one of their own training days.
 
-Update policies use both `USING` and `WITH CHECK` where necessary.  
+Update policies use both `USING` and `WITH CHECK` where necessary.
 This prevents users from changing an existing row in a way that would move it into another user's data scope.
 
 ### Reference Tables
@@ -167,58 +329,151 @@ Examples include:
 - `exercises`
 - `muscle_groups`
 
-These tables currently allow:
+These tables currently allow normal authenticated client access for reading only:
 
 ```text
 SELECT  -> authenticated users
-INSERT  -> not allowed through RLS policies
-UPDATE  -> not allowed through RLS policies
-DELETE  -> not allowed through RLS policies
+INSERT  -> not allowed through normal RLS policies
+UPDATE  -> not allowed through normal RLS policies
+DELETE  -> not allowed through normal RLS policies
 ```
 
-Changes to reference data should be performed in a controlled way through backend logic, database administration or versioned database migrations.
+Changes to reference data should be performed in a controlled way through backend administration, database administration or versioned database migrations/seeds.
 
 Sensitive configuration such as database URLs, passwords and API keys must be provided through environment variables.
 
-A `.env.example` file can be added to document required configuration values without exposing real secrets.
-
 ## Testing Strategy
 
-Testing should be part of the backend from the beginning.
+Testing is split into different levels.
 
-Planned test areas:
+### Repository Integration Tests
 
-- unit tests for validation and service logic
-- repository tests for database access
-- integration tests for API endpoints
-- security tests for authentication and user data access
-- later CI/CD tests through GitHub Actions
+Implemented now.
 
-Important cases to test:
+These tests use:
 
-- invalid input should be rejected
-- database constraints should still protect the data
-- users should not access other users' training data
-- API responses should have the expected structure
-- common workflows should work from request to database and back
+- local Supabase
+- real PostgreSQL I/O
+- real Exposed queries
+- temporary Supabase Auth users where required
+- seeded reference data
 
-## Initial API Plan
+Repository integration tests intentionally use `runBlocking`.
 
-The backend should start small and grow step by step.
+They perform real external I/O against the local Supabase/Auth/PostgreSQL stack, so Kotlin coroutine test virtual-time behavior is not required here.
 
-Planned / implemented first endpoints:
+The complete current suite contains 108 tests and passes successfully.
 
-- `GET /health` - implemented
-- `GET /exercises` - planned
-- `GET /training-days/{date}` - planned
+### Service Unit Tests
 
-The first goal is not to implement every feature at once.  
-The first goal is to verify that:
+Planned for the service phase.
 
-- the Ktor server starts correctly
-- routing works
-- JSON responses work
-- the backend can read from the database
-- the project structure is clean
+Service tests should be fast and should normally avoid real database access by using fakes or mocks.
 
-Writing data should be added later after the basic read structure works reliably.
+`runTest` will be appropriate for coroutine-based service unit tests because those tests will not depend on real PostgreSQL or Supabase network/database I/O.
+
+### API Integration Tests
+
+Planned after routes and services are implemented.
+
+These tests should verify complete flows:
+
+```text
+HTTP Request
+→ Route
+→ Service
+→ Repository
+→ Database
+→ HTTP Response
+```
+
+### Security / RLS Tests
+
+Still planned.
+
+These tests should verify that one authenticated user cannot access or modify another user's data.
+
+### CI/CD
+
+Automated execution through GitHub Actions is planned for a later phase.
+
+## Local Test Environment
+
+Repository tests use dedicated test environment variables:
+
+```text
+TEST_DATABASE_URL
+TEST_DATABASE_USER
+TEST_DATABASE_PASSWORD
+TEST_SUPABASE_URL
+TEST_SUPABASE_SECRET_KEY
+```
+
+The local test environment is loaded with `direnv`.
+
+`.env.test` contains local test credentials and must not be committed.
+
+`.envrc` loads `.env.test` and can be version controlled because it contains no secret values itself.
+
+## Local Supabase Seeds
+
+The local Supabase database can be recreated with:
+
+```bash
+supabase db reset
+```
+
+Seed files are applied in dependency order.
+
+Current seed files:
+
+```text
+supabase/seeds/02_seed_core_data.sql
+supabase/seeds/03_seed_exercises.sql
+supabase/seeds/04_seed_exercises_muscle_groups.sql
+```
+
+The seed data provides:
+
+- exercise categories
+- muscle groups
+- difficulty grades
+- exercises
+- exercise-to-muscle-group mappings
+
+Tests use seeded reference data rather than relying on fixed identity IDs.
+
+## API Plan
+
+Implemented:
+
+- `GET /health`
+
+Planned:
+
+- exercise/reference-data endpoints
+- training-day endpoints
+- strength endpoints
+- endurance endpoints
+- bouldering endpoints
+
+The API should be implemented after the service layer so that routes remain thin and business rules stay out of HTTP handlers.
+
+## Next Milestone
+
+The repository and repository-integration-test phase is complete.
+
+The next step is a new service-layer development phase.
+
+The intended progression is:
+
+```text
+Repository layer complete
+→ Service layer
+→ Service unit tests
+→ DTOs and routes
+→ API integration tests
+→ Security/RLS tests
+→ Logging and broader operational concerns
+→ CI/CD
+```
