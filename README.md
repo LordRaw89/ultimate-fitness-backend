@@ -1,33 +1,62 @@
 # Ultimate Fitness Backend
 
-Backend and database layer for a modular fitness tracking app.
+A Kotlin/Ktor backend for a modular fitness tracking application built around **strength training, endurance training and bouldering**.
 
-## Goal
+The project is currently focused on building a clean, testable backend architecture on top of PostgreSQL and Supabase.
 
-This project contains the backend and database structure for a fitness tracking application.
+## Highlights
 
-The app is designed around separate training domains instead of forcing every activity into a single generic workout model.
+- Kotlin + Ktor backend
+- PostgreSQL / Supabase database
+- Exposed SQL DSL
+- Coroutine-friendly repositories with `suspend` and `suspendTransaction`
+- HikariCP connection pooling
+- Row Level Security for user-owned data
+- Reproducible local Supabase migrations and seed data
+- Separate read-only repositories for global reference data
+- Automated repository integration tests against local Supabase/PostgreSQL
+- **108 automated tests currently passing**
 
-## Main Domains
+## Training Domains
 
-- Strength training
-- Endurance training
-- Bouldering
+The data model deliberately keeps the main training domains separate instead of forcing every activity into one generic workout structure.
+
+```text
+training_days
+├── strength_entries
+│   ├── strength_rep_sets
+│   └── strength_time_sets
+├── endurance_entries
+└── boulder_entries
+    └── boulder_routes
+```
+
+Additional reference data includes:
+
+```text
+exercises
+├── exercise_categories
+└── exercise_muscle_groups
+    └── muscle_groups
+
+boulder_routes
+└── difficulty_grades
+```
 
 ## Tech Stack
 
-- PostgreSQL
-- Supabase
 - Kotlin
 - Ktor
+- PostgreSQL
+- Supabase
 - Exposed DSL
 - PostgreSQL JDBC Driver
-- HikariCP Connection Pool
+- HikariCP
 - Gradle
 
 ## Architecture
 
-The backend follows a layered structure:
+The backend follows a layered architecture:
 
 ```text
 Route
@@ -38,76 +67,37 @@ Route
 
 ### Repository Layer
 
-The repository layer is responsible for database access.
+The repository layer is implemented and tested.
 
-Repositories:
+Repositories are responsible for database access only. They:
 
 - use Exposed SQL DSL
 - expose coroutine-friendly `suspend` functions
 - use `suspendTransaction`
 - map database rows to Kotlin data classes
-- do not contain HTTP-specific logic
-- do not contain business logic
+- stay independent from HTTP-specific logic
+- do not contain business workflows
 
 ### Service Layer
 
-The service layer is the next backend milestone.
+The service layer is the next development milestone.
 
 Services will be responsible for:
 
 - business rules
 - validation
 - coordinating multiple repositories
-- translating database-level conflicts into domain-level results
+- translating database conflicts into domain-level results
 - authorization-related decisions
-- composing richer domain objects for the API
+- composing richer objects for the API
 
-## Current Status
+Routes will remain thin and translate service results into HTTP responses.
 
-### Backend Foundation
+## Implemented Repositories
 
-- Initial Ktor backend created
-- Health endpoint implemented
-- Central Ktor application module configured
-- PostgreSQL connection to Supabase configured
-- HikariCP connection pool integrated
-- Exposed connected to PostgreSQL
-- Startup database connection check implemented with `SELECT 1`
-- Database connection integration test implemented
-- Repeated database initialization reuses the existing HikariCP pool
-- Database pool can be shut down explicitly through `DatabaseConfig.shutdown()`
+### User-Owned Training Data
 
-### Database
-
-- Database schema created
-- Core seed data created
-- Exercise catalog created
-- Muscle group mappings with primary, secondary and stabilizing roles
-- Row Level Security policies implemented
-- Indexes implemented
-- Foreign key relationships mapped across the training domains
-
-### Exposed Table Mappings
-
-The following tables are mapped with Exposed:
-
-- `profiles`
-- `training_days`
-- `exercise_categories`
-- `exercises`
-- `muscle_groups`
-- `exercise_muscle_groups`
-- `difficulty_grades`
-- `strength_entries`
-- `strength_rep_sets`
-- `strength_time_sets`
-- `endurance_entries`
-- `boulder_entries`
-- `boulder_routes`
-
-### Repository Layer
-
-Write repositories are implemented for user-owned training data:
+Write-capable repositories are implemented for:
 
 - Profiles
 - Training Days
@@ -118,7 +108,9 @@ Write repositories are implemented for user-owned training data:
 - Boulder Entries
 - Boulder Routes
 
-Read-only repositories are implemented for reference data:
+### Reference Data
+
+Read-only repositories are implemented for:
 
 - Difficulty Grades
 - Exercise Categories
@@ -126,51 +118,117 @@ Read-only repositories are implemented for reference data:
 - Muscle Groups
 - Exercise Muscle Groups
 
-Read-only reference repositories expose the queries needed by the frontend, including:
+These repositories support frontend use cases such as:
 
-- difficulty grades by grading system
-- available grading systems
-- exercises by category
-- exercises by name
-- muscle groups by name
-- exercise-to-muscle-group mappings by exercise or muscle group
+- loading available grading systems
+- filtering difficulty grades by system
+- filtering exercises by category
+- finding exercises by name
+- loading muscle groups
+- loading exercise-to-muscle-group mappings
 
-## Integration Tests
+## Testing
 
-Repository integration tests run against the local Supabase PostgreSQL database.
+Repository integration tests run against a real local Supabase/PostgreSQL environment.
 
-Covered areas include:
+The current test suite covers:
 
-- create, read, update and delete operations where applicable
+- CRUD operations where applicable
 - foreign key constraints
 - unique constraints
 - check constraints
-- nullable values
+- nullable fields
 - unknown IDs
 - timestamp updates
-- seed-based reference data
-- Supabase Auth test users
+- seeded reference data
+- temporary Supabase Auth test users
 - read-only reference repositories
+- database connection handling
 
-The complete backend test suite currently contains **108 tests** and passes successfully.
+The complete test suite currently contains **108 tests** and passes successfully.
 
-Run all tests with:
+From the `backend/` directory:
 
 ```bash
 ./gradlew test
 ```
 
-Run a single repository test class with:
+To force all tests to execute again:
+
+```bash
+./gradlew test --rerun-tasks
+```
+
+Example for a single repository test class:
 
 ```bash
 ./gradlew test --tests "de.exercise.ExerciseRepositoryTest"
 ```
 
-### Test Environment
+## Local Development
 
-The integration tests use these environment variables:
+### Prerequisites
+
+You will need:
+
+- JDK 17
+- Docker
+- Supabase CLI
+- Git
+
+`direnv` is optional but recommended for local environment-variable loading.
+
+### 1. Clone the Repository
+
+```bash
+git clone <repository-url>
+cd ultimate-fitness-backend
+```
+
+### 2. Start Local Supabase
+
+```bash
+supabase start
+```
+
+Recreate the local database and apply the current migration and seed data with:
+
+```bash
+supabase db reset
+```
+
+The database source of truth lives under:
 
 ```text
+supabase/
+├── migrations/
+└── seeds/
+```
+
+### 3. Configure Environment Variables
+
+An example file is provided at:
+
+```text
+backend/.env.example
+```
+
+Create your own local test environment file:
+
+```bash
+cd backend
+cp .env.example .env.test
+```
+
+Fill in the required local values.
+
+The backend currently uses:
+
+```text
+DATABASE_URL
+DATABASE_USER
+DATABASE_PASSWORD
+
 TEST_DATABASE_URL
 TEST_DATABASE_USER
 TEST_DATABASE_PASSWORD
@@ -178,49 +236,45 @@ TEST_SUPABASE_URL
 TEST_SUPABASE_SECRET_KEY
 ```
 
-The local test environment is loaded through `direnv`.
+Do **not** commit real credentials.
 
-`.env.test` contains the local test credentials and must not be committed.
-
-`.envrc` loads `.env.test` and may be version controlled because it contains no credentials itself.
-
-### Test Data Lifecycle
-
-Tests that require profiles create temporary Supabase Auth users through `SupabaseAuthTestHelper`.
-
-Typical lifecycle:
-
-```text
-Create Supabase Auth test user
-→ Create profile
-→ Create required training data
-→ Execute test
-→ Delete child records
-→ Delete profile
-→ Delete Supabase Auth user
-```
-
-Cleanup is performed with `try/finally`.
-
-## Local Supabase Database
-
-The local database can be recreated with:
+If `direnv` is installed, the existing `.envrc` can load the local `.env.test` values after:
 
 ```bash
-supabase db reset
+direnv allow
 ```
 
-Supabase migrations create the schema and the configured seed files are applied in dependency order.
+### 4. Run the Tests
 
-Current seed files:
+```bash
+./gradlew test
+```
+
+### 5. Run the Backend
+
+```bash
+./gradlew run
+```
+
+The current health endpoint is:
 
 ```text
-supabase/seeds/02_seed_core_data.sql
-supabase/seeds/03_seed_exercises.sql
-supabase/seeds/04_seed_exercises_muscle_groups.sql
+GET /health
 ```
 
-The seed data provides reference data for:
+Expected response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+## Database and Seed Data
+
+Local Supabase migrations define the database schema, constraints, Row Level Security policies and indexes.
+
+Seed files provide reference data for:
 
 - exercise categories
 - muscle groups
@@ -228,25 +282,72 @@ The seed data provides reference data for:
 - exercises
 - exercise-to-muscle-group mappings
 
-Repository tests use seeded reference data instead of relying on fixed database IDs.
+Tests look up seeded reference records instead of relying on fixed identity IDs.
 
-## Security Notes
+## Security
 
-Local backups and environment files are ignored via `.gitignore`.
+The project uses multiple layers of protection:
 
-Do not commit:
+- database constraints protect data integrity
+- Row Level Security restricts access to user-owned data
+- reference tables are read-only for normal authenticated clients
+- secrets are provided through environment variables
+- local environment files and backups are ignored by Git
+
+Never commit:
 
 - `.env`
 - `.env.test`
-- Supabase keys
 - database passwords
+- Supabase secret keys
+- JWTs
 - local database backups
 - real user data
 
-Secrets, passwords and JWTs must never be written to logs.
+## Documentation
 
-## Next Milestone
+Additional technical documentation is available in `docs/`, including:
 
-The repository and integration-test phase is complete.
+- backend architecture
+- database model
+- database test protocol
 
-The next planned step is the service layer, where business logic will be added on top of the tested repository foundation.
+## Current Status
+
+Completed:
+
+- database schema and relationships
+- Supabase migrations
+- reproducible seed data
+- Row Level Security policies
+- Exposed table mappings
+- repository layer
+- repository integration tests
+- database connection-pool reuse
+- project documentation
+
+Next milestone:
+
+```text
+Service Layer
+→ Service Unit Tests
+→ DTOs and Routes
+→ API Integration Tests
+→ Security / RLS Tests
+→ Logging and Operational Improvements
+→ CI/CD
+```
+
+## Project Status
+
+This project is actively under development.
+
+The repository layer and its integration-test foundation are complete. The next phase focuses on implementing the service layer and application business logic.
+
+## License
+
+This repository is published publicly for portfolio and review purposes.
+
+No license is granted for the use, modification, or redistribution
+of this code beyond the permissions provided by GitHub's Terms of Service.
+All rights reserved.
