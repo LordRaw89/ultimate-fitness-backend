@@ -93,6 +93,13 @@ Implemented:
 - Basic request handling for invalid IDs (`400 Bad Request`)
 - Not-found handling for missing categories (`404 Not Found`)
 
+- Muscle Group service
+- Response DTO for API responses
+- GET `/muscle-groups` to retrieve all muscle groups
+- GET `/muscle-groups/{id}` to retrieve a muscle group by ID
+- Basic request handling for invalid IDs (`400 Bad Request`)
+- Not-found handling for missing muscle groups (`404 Not Found`)
+
 Services are responsible for:
 - business rules
 - validation
