@@ -80,10 +80,20 @@ Repositories are responsible for database access only. They:
 
 ### Service Layer
 
-The service layer is the next development milestone.
+The service layer is currently under development.
 
-Services will be responsible for:
+The first vertical slice for Exercise Categories has been implemented
+and manually verified.
 
+Implemented:
+- Exercise Category service
+- Response DTO for API responses
+- GET `/exercise-categories` to retrieve all exercise categories
+- GET `/exercise-categories/{id}` to retrieve a category by ID
+- Basic request handling for invalid IDs (`400 Bad Request`)
+- Not-found handling for missing categories (`404 Not Found`)
+
+Services are responsible for:
 - business rules
 - validation
 - coordinating multiple repositories
@@ -330,8 +340,8 @@ Next milestone:
 
 ```text
 Service Layer
+→ Implement remaining vertical slices
 → Service Unit Tests
-→ DTOs and Routes
 → API Integration Tests
 → Security / RLS Tests
 → Logging and Operational Improvements
@@ -342,7 +352,10 @@ Service Layer
 
 This project is actively under development.
 
-The repository layer and its integration-test foundation are complete. The next phase focuses on implementing the service layer and application business logic.
+The repository layer and its integration-test foundation are complete.
+The service layer is now under development, starting with the Exercise
+Categories vertical slice. This slice includes the service, response DTO,
+GET endpoints, and manually verified HTTP responses.
 
 ## License
 
