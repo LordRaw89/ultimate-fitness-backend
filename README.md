@@ -105,6 +105,14 @@ Implemented:
 - Basic request handling for invalid IDs (`400 Bad Request`)
 - Not-found handling for missing difficulty grades (`404 Not Found`)
 
+- Exercise service
+- Response DTOs for exercises with and without muscle groups
+- GET `/exercises` to retrieve all exercises
+- GET `/exercises/{id}` to retrieve an exercise by ID
+- GET `/exercises/{id}/with-muscle-groups` to retrieve an exercise with its muscle groups
+- Basic request handling for invalid IDs (`400 Bad Request`)
+- Not-found handling for missing exercises (`404 Not Found`)
+
 Services are responsible for:
 - business rules
 - validation
