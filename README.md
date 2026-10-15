@@ -100,8 +100,10 @@ Implemented:
 - Difficulty Grade service
 - Response DTO for API responses
 - GET `/difficulty-grades` to retrieve all difficulty grades
+- GET `/difficulty-grades/{id}` to retrieve a difficulty grade by ID
 - Difficulty grades include their ID, grade, and grading system
-- Manual verification using `curl`
+- Basic request handling for invalid IDs (`400 Bad Request`)
+- Not-found handling for missing difficulty grades (`404 Not Found`)
 
 Services are responsible for:
 - business rules
