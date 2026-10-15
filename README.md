@@ -82,9 +82,6 @@ Repositories are responsible for database access only. They:
 
 The service layer is currently under development.
 
-The first vertical slice for Exercise Categories has been implemented
-and manually verified.
-
 Implemented:
 - Exercise Category service
 - Response DTO for API responses
@@ -99,6 +96,12 @@ Implemented:
 - GET `/muscle-groups/{id}` to retrieve a muscle group by ID
 - Basic request handling for invalid IDs (`400 Bad Request`)
 - Not-found handling for missing muscle groups (`404 Not Found`)
+
+- Difficulty Grade service
+- Response DTO for API responses
+- GET `/difficulty-grades` to retrieve all difficulty grades
+- Difficulty grades include their ID, grade, and grading system
+- Manual verification using `curl`
 
 Services are responsible for:
 - business rules

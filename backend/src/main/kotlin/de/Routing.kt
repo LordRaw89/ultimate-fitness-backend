@@ -1,5 +1,6 @@
 package de
 
+import de.difficultygrade.difficultyGradeRoutes
 import de.exercisecategory.exerciseCategoryRoutes
 import de.musclegroup.muscleGroupRoutes
 import io.ktor.server.application.*
@@ -22,5 +23,6 @@ fun Application.configureRouting() {
 
         exerciseCategoryRoutes()
         muscleGroupRoutes()
+        difficultyGradeRoutes()
     }
 }
