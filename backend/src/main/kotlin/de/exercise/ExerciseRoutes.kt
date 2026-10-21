@@ -53,5 +53,35 @@ fun Route.exerciseRoutes() {
 
             call.respond(exercise.toResponse())
         }
+
+        // Retrieve multiple exercises with their muscle groups
+        get("/batch-with-muscle-groups") {
+
+            val rawIds = call.request.queryParameters.getAll("ids")
+
+            if (rawIds.isNullOrEmpty()) {
+                return@get call.respond(
+                    HttpStatusCode.BadRequest,
+                    "At least one exercise ID is required"
+                )
+            }
+
+            val exerciseIds = rawIds.map { it.toLongOrNull() }
+
+            if (exerciseIds.any { it == null || it <= 0L }) {
+                return@get call.respond(
+                    HttpStatusCode.BadRequest,
+                    "All exercise IDs must be positive numbers"
+                )
+            }
+
+            val exercises = ExerciseService
+                .getExercisesWithMuscleGroupsByIds(
+                    exerciseIds.filterNotNull()
+                )
+                .map { it.toResponse() }
+
+            call.respond(exercises)
+        }
     }
 }

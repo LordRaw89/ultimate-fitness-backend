@@ -64,4 +64,62 @@ object ExerciseService {
             muscleGroups = muscleGroupDetails
         )
     }
+
+
+    suspend fun getExercisesWithMuscleGroupsByIds(
+        exerciseIds: List<Long>
+    ): List<ExerciseWithMuscleGroups> {
+
+        if (exerciseIds.isEmpty()) {
+            return emptyList()
+        }
+
+        val exercises = ExerciseRepository.findByIds(exerciseIds)
+
+        if (exercises.isEmpty()) {
+            return emptyList()
+        }
+
+        val exerciseMuscleGroups =
+            ExerciseMuscleGroupRepository.findByExerciseIds(
+                exercises.map { it.exerciseId }
+            )
+
+        val muscleGroupIds = exerciseMuscleGroups
+            .map { it.muscleGroupId }
+            .distinct()
+
+        val muscleGroups = MuscleGroupRepository.findByIds(muscleGroupIds)
+
+        val associationsByExerciseId =
+            exerciseMuscleGroups.groupBy { it.exerciseId }
+
+        val muscleGroupsById =
+            muscleGroups.associateBy { it.muscleGroupId }
+
+        return exercises.map { exercise ->
+
+            val associations =
+                associationsByExerciseId[exercise.exerciseId]
+                    ?: emptyList()
+
+            val details = associations.mapNotNull { association ->
+                val muscleGroup =
+                    muscleGroupsById[association.muscleGroupId]
+
+                muscleGroup?.let {
+                    ExerciseMuscleGroupDetails(
+                        muscleGroup = it,
+                        role = association.role
+                    )
+                }
+            }
+
+            ExerciseWithMuscleGroups(
+                exercise = exercise,
+                muscleGroups = details
+            )
+        }
+    }
+
 }

@@ -1,6 +1,7 @@
 package de.musclegroup
 
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import java.time.OffsetDateTime
@@ -28,6 +29,39 @@ object ExerciseMuscleGroupRepository {
                 }
                 .singleOrNull()
                 ?.let { row ->
+                    ExerciseMuscleGroup(
+                        exerciseMuscleGroupId =
+                            row[ExerciseMuscleGroupsTable.exerciseMuscleGroupId],
+                        exerciseId =
+                            row[ExerciseMuscleGroupsTable.exerciseId],
+                        muscleGroupId =
+                            row[ExerciseMuscleGroupsTable.muscleGroupId],
+                        role =
+                            row[ExerciseMuscleGroupsTable.role],
+                        createdAt =
+                            row[ExerciseMuscleGroupsTable.createdAt],
+                        updatedAt =
+                            row[ExerciseMuscleGroupsTable.updatedAt]
+                    )
+                }
+        }
+    }
+
+    suspend fun findByExerciseIds(
+        exerciseIds: List<Long>
+    ): List<ExerciseMuscleGroup> {
+
+        if (exerciseIds.isEmpty()) {
+            return emptyList()
+        }
+
+        return suspendTransaction {
+            ExerciseMuscleGroupsTable
+                .selectAll()
+                .where {
+                    ExerciseMuscleGroupsTable.exerciseId inList exerciseIds
+                }
+                .map { row ->
                     ExerciseMuscleGroup(
                         exerciseMuscleGroupId =
                             row[ExerciseMuscleGroupsTable.exerciseMuscleGroupId],

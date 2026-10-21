@@ -1,6 +1,7 @@
 package de.exercise
 
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import java.time.OffsetDateTime
@@ -27,6 +28,39 @@ object ExerciseRepository {
                 }
                 .singleOrNull()
                 ?.let { row ->
+                    Exercise(
+                        exerciseId =
+                            row[ExercisesTable.exerciseId],
+                        exerciseName =
+                            row[ExercisesTable.exerciseName],
+                        exerciseCategoryId =
+                            row[ExercisesTable.exerciseCategoryId],
+                        notes =
+                            row[ExercisesTable.notes],
+                        createdAt =
+                            row[ExercisesTable.createdAt],
+                        updatedAt =
+                            row[ExercisesTable.updatedAt]
+                    )
+                }
+        }
+    }
+
+    suspend fun findByIds(
+        exerciseIds: List<Long>
+    ): List<Exercise> {
+
+        if (exerciseIds.isEmpty()) {
+            return emptyList()
+        }
+
+        return suspendTransaction {
+            ExercisesTable
+                .selectAll()
+                .where {
+                    ExercisesTable.exerciseId inList exerciseIds
+                }
+                .map { row ->
                     Exercise(
                         exerciseId =
                             row[ExercisesTable.exerciseId],

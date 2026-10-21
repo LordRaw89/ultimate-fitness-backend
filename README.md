@@ -110,8 +110,10 @@ Implemented:
 - GET `/exercises` to retrieve all exercises
 - GET `/exercises/{id}` to retrieve an exercise by ID
 - GET `/exercises/{id}/with-muscle-groups` to retrieve an exercise with its muscle groups
+- GET `/exercises/batch-with-muscle-groups?ids=1&ids=2` to retrieve multiple exercises with their muscle groups
 - Basic request handling for invalid IDs (`400 Bad Request`)
 - Not-found handling for missing exercises (`404 Not Found`)
+- Batch requests return an empty list if no exercises are found (`200 OK`)
 
 Services are responsible for:
 - business rules
